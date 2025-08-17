@@ -1,14 +1,11 @@
 import { Stack } from "expo-router";
+import { AuthProvider } from "../src/api/AuthContext";
+import "react-native-gesture-handler";
 
-const Layout = () => {
+export default function RootLayout() {
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: "black" },
-      }}
-    />
+    <AuthProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </AuthProvider>
   );
-};
-
-export default Layout;
+}

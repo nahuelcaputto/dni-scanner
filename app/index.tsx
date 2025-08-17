@@ -1,16 +1,7 @@
-import React from "react";
-import { View, Text } from "react-native";
-import DniScanner from "../components/DniScanner";
+import { Redirect } from "expo-router";
+import { useAuth } from "../src/api/AuthContext";
 
-const Index = () => {
-  return (
-    <>
-      <DniScanner />
-      <View>
-        <Text>Hola mundo</Text>
-      </View>
-    </>
-  );
-};
-
-export default Index;
+export default function Index() {
+  const { token } = useAuth();
+  return <Redirect href={token ? "/(app)/home" : "/(auth)/login"} />;
+}
