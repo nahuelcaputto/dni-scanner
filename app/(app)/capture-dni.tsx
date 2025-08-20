@@ -7,7 +7,7 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import PrimaryButton from "../../src/components/PrimaryButton";
 import { uploadDniImages } from "../../src/api/upload";
 import { useAuth } from "../../src/api/AuthContext";

@@ -20,7 +20,7 @@ export default function LoginScreen() {
       Alert.alert("Login fallido", "Revisá tus credenciales");
       return;
     }
-    setToken(res.token);
+    await setToken(res.token); // ← Web: sessionStorage | Native: SecureStore
     router.replace("/(app)/home");
   }
 

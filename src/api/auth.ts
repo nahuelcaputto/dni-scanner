@@ -1,4 +1,5 @@
-const BASE_URL = "https://TU_API_BASE_URL"; // ←--- PONÉ TU URL
+import Constants from "expo-constants";
+const { API_URL } = Constants.expoConfig?.extra ?? {};
 
 export type LoginPayload = { username: string; password: string };
 
@@ -6,7 +7,7 @@ export async function login(
   payload: LoginPayload
 ): Promise<{ token: string } | null> {
   try {
-    const res = await fetch(`${BASE_URL}/auth/login`, {
+    const res = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

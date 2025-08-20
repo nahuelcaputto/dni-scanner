@@ -1,6 +1,7 @@
-const BASE_URL = "https://TU_API_BASE_URL"; // ←--- MISMA U OTRA URL
+import Constants from "expo-constants";
+const { API_URL } = Constants.expoConfig?.extra ?? {};
 
-// ✅ Fix TS: convertir uri → Blob y usar filename como 3er parámetro
+// Convertir uri (file:// o content://) a Blob
 async function uriToBlob(uri: string): Promise<Blob> {
   const res = await fetch(uri);
   return await res.blob();
@@ -16,15 +17,14 @@ export async function uploadDniImages({
   dorso: { uri: string; mime?: string };
 }) {
   const form = new FormData();
-
   const frenteBlob = await uriToBlob(frente.uri);
   const dorsoBlob = await uriToBlob(dorso.uri);
 
-  // En DOM types: append(name, blob, filename)
+  // DOM types: append(name, blob, filename)
   form.append("frente", frenteBlob, "dni_frente.jpg");
   form.append("dorso", dorsoBlob, "dni_dorso.jpg");
 
-  const res = await fetch(`${BASE_URL}/dni/upload`, {
+  const res = await fetch(`${API_URL}/dni/upload`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
