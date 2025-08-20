@@ -1,11 +1,15 @@
 import Constants from "expo-constants";
 const { API_URL } = Constants.expoConfig?.extra ?? {};
 
-export type LoginPayload = { username: string; password: string };
+export type LoginPayload = {
+  email: string;
+  password: string;
+  rememberMe: boolean;
+};
 
 export async function login(
   payload: LoginPayload
-): Promise<{ token: string } | null> {
+): Promise<{ access_token: string } | null> {
   try {
     const res = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
@@ -14,7 +18,7 @@ export async function login(
     });
 
     if (!res.ok) return null;
-    const data = (await res.json()) as { token: string };
+    const data = (await res.json()) as { access_token: string };
     return data;
   } catch (e) {
     console.warn("login error", e);

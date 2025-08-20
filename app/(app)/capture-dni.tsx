@@ -27,7 +27,7 @@ export default function CaptureDniScreen() {
 
   async function takePhoto() {
     try {
-      // @ts-ignore - takePictureAsync está disponible en CameraView via ref
+      // @ts-ignore - takePictureAsync existe en CameraView via ref
       const photo = await cameraRef.current?.takePictureAsync({
         skipProcessing: true,
         quality: 0.9,
@@ -91,6 +91,11 @@ export default function CaptureDniScreen() {
             style={StyleSheet.absoluteFill}
             facing="back"
           />
+          {/* Overlay guía */}
+          <View style={styles.overlay} pointerEvents="none">
+            <View style={styles.guideBox} />
+            <Text style={styles.helper}>Alineá el DNI dentro del marco</Text>
+          </View>
         </View>
       ) : (
         <View style={{ height: 320, gap: 12 }}>
@@ -137,6 +142,29 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     backgroundColor: "#000",
+  },
+  // Overlay centrado con marco
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  guideBox: {
+    width: "85%",
+    height: 190,
+    borderWidth: 2,
+    borderColor: "#ffffff",
+    borderRadius: 12,
+    backgroundColor: "transparent",
+  },
+  helper: {
+    position: "absolute",
+    bottom: 16,
+    color: "#fff",
+    fontWeight: "700",
+    textShadowColor: "rgba(0,0,0,0.6)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   preview: { height: 150, borderRadius: 12, resizeMode: "cover" },
   center: {
