@@ -1,41 +1,55 @@
 import Constants from "expo-constants";
+import { Platform } from "react-native";
 const { API_URL } = Constants.expoConfig?.extra ?? {};
 
-// Convertir uri (file:// o content://) a Blob
-async function uriToBlob(uri: string): Promise<Blob> {
-  const res = await fetch(uri);
-  return await res.blob();
-}
+const FILE_FIELD = "file";
 
-export async function uploadDniImages({
-  token,
+export async function analyzeDniImages({
   frente,
   dorso,
 }: {
-  token: string;
   frente: { uri: string; mime?: string };
   dorso: { uri: string; mime?: string };
 }) {
+  const [frontRes, backRes] = await Promise.all([
+    analyzeOne(frente.uri, "front", frente.mime),
+    analyzeOne(dorso.uri, "back", dorso.mime),
+  ]);
+  return { frente: frontRes, dorso: backRes } as const;
+}
+
+/** Un único POST multipart/form-data con el campo `file` */
+async function analyzeOne(
+  uri: string,
+  side: "front" | "back",
+  mime = "image/jpeg"
+) {
   const form = new FormData();
-  const frenteBlob = await uriToBlob(frente.uri);
-  const dorsoBlob = await uriToBlob(dorso.uri);
 
-  // DOM types: append(name, blob, filename)
-  form.append("frente", frenteBlob, "dni_frente.jpg");
-  form.append("dorso", dorsoBlob, "dni_dorso.jpg");
+  if (Platform.OS === "web") {
+    // Web: Blob estándar
+    const blob = await (await fetch(uri)).blob();
+    form.append(FILE_FIELD, blob, `dni_${side}.jpg`);
+  } else {
+    form.append(FILE_FIELD, {
+      uri,
+      name: `dni_${side}.jpg`,
+      type: mime,
+    } as any);
+  }
 
-  const res = await fetch(`${API_URL}/dni/upload`, {
+  const res = await fetch(`${API_URL}/momant-ai/analyze-dni?ocr=false`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      // ⚠️ No seteés manualmente Content-Type; fetch arma el boundary
-    },
     body: form,
   });
 
+  const text = await res.text();
   if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(`Upload failed: ${res.status} ${msg}`);
+    throw new Error(`Analyze failed ${res.status}: ${text}`);
   }
-  return res.json();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { raw: text }; // por si devuelve texto plano
+  }
 }

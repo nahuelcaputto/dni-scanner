@@ -8,16 +8,19 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import * as ImageManipulator from "expo-image-manipulator";
 import PrimaryButton from "../../src/components/PrimaryButton";
-import { uploadDniImages } from "../../src/api/upload";
+import { analyzeDniImages } from "../../src/api/upload";
 import { useAuth } from "../../src/api/AuthContext";
+
+type PhotoState = { uri: string; preview: string };
 
 export default function CaptureDniScreen() {
   const cameraRef = useRef<CameraView | null>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const [step, setStep] = useState<"frente" | "dorso">("frente");
-  const [frenteUri, setFrenteUri] = useState<string | null>(null);
-  const [dorsoUri, setDorsoUri] = useState<string | null>(null);
+  const [frente, setFrente] = useState<PhotoState | null>(null);
+  const [dorso, setDorso] = useState<PhotoState | null>(null);
   const [uploading, setUploading] = useState(false);
   const { token } = useAuth();
 
@@ -28,16 +31,33 @@ export default function CaptureDniScreen() {
   async function takePhoto() {
     try {
       // @ts-ignore - takePictureAsync existe en CameraView via ref
-      const photo = await cameraRef.current?.takePictureAsync({
-        skipProcessing: true,
+      const snap = await cameraRef.current?.takePictureAsync({
         quality: 0.9,
+        skipProcessing: false,
       });
-      if (!photo?.uri) return;
+      if (!snap?.uri) return;
+
+      const manipulated = await ImageManipulator.manipulateAsync(
+        snap.uri,
+        [{ resize: { width: 1600 } }],
+        {
+          compress: 0.9,
+          format: ImageManipulator.SaveFormat.JPEG,
+          base64: true,
+        }
+      );
+
+      const preview = manipulated.base64
+        ? `data:image/jpeg;base64,${manipulated.base64}`
+        : manipulated.uri;
+
+      const state: PhotoState = { uri: manipulated.uri, preview };
+
       if (step === "frente") {
-        setFrenteUri(photo.uri);
+        setFrente(state);
         setStep("dorso");
       } else {
-        setDorsoUri(photo.uri);
+        setDorso(state);
       }
     } catch (e) {
       console.warn(e);
@@ -47,19 +67,19 @@ export default function CaptureDniScreen() {
 
   function reset() {
     setStep("frente");
-    setFrenteUri(null);
-    setDorsoUri(null);
+    setFrente(null);
+    setDorso(null);
   }
 
   async function send() {
-    if (!frenteUri || !dorsoUri) return;
+    if (!frente || !dorso) return;
     try {
       setUploading(true);
-      await uploadDniImages({
-        token: token ?? "TOKEN_DEMO",
-        frente: { uri: frenteUri },
-        dorso: { uri: dorsoUri },
+      const result = await analyzeDniImages({
+        frente: { uri: frente.uri },
+        dorso: { uri: dorso.uri },
       });
+      console.log("Analyze DNI result", result);
       Alert.alert("Listo", "Imágenes enviadas correctamente");
       reset();
     } catch (e: any) {
@@ -78,13 +98,15 @@ export default function CaptureDniScreen() {
     );
   }
 
+  const bothTaken = !!frente && !!dorso;
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>
         Capturar DNI ({step === "frente" ? "Frente" : "Dorso"})
       </Text>
 
-      {!frenteUri || !dorsoUri ? (
+      {!bothTaken ? (
         <View style={styles.cameraWrap}>
           <CameraView
             ref={cameraRef}
@@ -99,14 +121,14 @@ export default function CaptureDniScreen() {
         </View>
       ) : (
         <View style={{ height: 320, gap: 12 }}>
-          <Image source={{ uri: frenteUri }} style={styles.preview} />
-          <Image source={{ uri: dorsoUri }} style={styles.preview} />
+          <Image source={{ uri: frente.preview }} style={styles.preview} />
+          <Image source={{ uri: dorso.preview }} style={styles.preview} />
         </View>
       )}
 
       <View style={{ height: 12 }} />
 
-      {!frenteUri || !dorsoUri ? (
+      {!bothTaken ? (
         <PrimaryButton
           label={
             step === "frente" ? "Tomar foto del frente" : "Tomar foto del dorso"
@@ -166,7 +188,12 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
-  preview: { height: 150, borderRadius: 12, resizeMode: "cover" },
+  preview: {
+    width: "100%",
+    height: 150,
+    borderRadius: 12,
+    resizeMode: "cover",
+  },
   center: {
     flex: 1,
     alignItems: "center",
