@@ -11,7 +11,13 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImageManipulator from "expo-image-manipulator";
 import PrimaryButton from "../../src/components/PrimaryButton";
 import { analyzeDniImages } from "../../src/api/upload";
-import { useAuth } from "../../src/api/AuthContext";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  interpolate,
+  runOnJS,
+} from "react-native-reanimated";
 
 type PhotoState = { uri: string; preview: string };
 
@@ -22,7 +28,15 @@ export default function CaptureDniScreen() {
   const [frente, setFrente] = useState<PhotoState | null>(null);
   const [dorso, setDorso] = useState<PhotoState | null>(null);
   const [uploading, setUploading] = useState(false);
-  const { token } = useAuth();
+
+  // Flip hint state
+  const [showFlipHint, setShowFlipHint] = useState(false);
+  const flip = useSharedValue(0);
+  const flipStyle = useAnimatedStyle(() => {
+    const rotateY = `${interpolate(flip.value, [0, 1], [0, 180])}deg`;
+    const opacity = interpolate(flip.value, [0, 0.85, 1], [1, 1, 0]);
+    return { transform: [{ perspective: 1000 }, { rotateY }], opacity };
+  });
 
   useEffect(() => {
     if (!permission) requestPermission();
@@ -56,6 +70,13 @@ export default function CaptureDniScreen() {
       if (step === "frente") {
         setFrente(state);
         setStep("dorso");
+        // Disparar hint de flip
+        setShowFlipHint(true);
+        flip.value = 0;
+        flip.value = withTiming(1, { duration: 500 }, () => {
+          runOnJS(setShowFlipHint)(false);
+          flip.value = 0; // reset para próximos usos
+        });
       } else {
         setDorso(state);
       }
@@ -113,11 +134,21 @@ export default function CaptureDniScreen() {
             style={StyleSheet.absoluteFill}
             facing="back"
           />
-          {/* Overlay guía */}
-          <View style={styles.overlay} pointerEvents="none">
-            <View style={styles.guideBox} />
-            <Text style={styles.helper}>Alineá el DNI dentro del marco</Text>
-          </View>
+          {/* Flip hint al pasar a 'dorso' y Overlay guía */}
+          {showFlipHint ? (
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.flipHintWrap, flipStyle]}
+            >
+              <View style={styles.flipCard} />
+              <Text style={styles.flipText}>Dale vuelta el DNI</Text>
+            </Animated.View>
+          ) : (
+            <View style={styles.overlay} pointerEvents="none">
+              <View style={styles.guideBox} />
+              <Text style={styles.helper}>Alineá el DNI dentro del marco</Text>
+            </View>
+          )}
         </View>
       ) : (
         <View style={{ height: 320, gap: 12 }}>
@@ -200,5 +231,31 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 12,
     padding: 16,
+  },
+  // Flip hint styles
+  flipHintWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  flipCard: {
+    width: "85%",
+    height: 190,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#fff",
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  flipText: {
+    marginTop: 10,
+    color: "#fff",
+    fontWeight: "700",
+    textShadowColor: "rgba(0,0,0,0.6)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });
