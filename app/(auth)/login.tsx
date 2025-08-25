@@ -28,7 +28,7 @@ export default function LoginScreen() {
       Alert.alert("Login fallido", "Revisá tus credenciales");
       return;
     }
-    await setToken(res.access_token); // Web: sessionStorage/localStorage. Native: memoria/SecureStore
+    await setToken(res.access_token, rememberMe); // Web: sessionStorage/localStorage. Native: memoria/SecureStore
     router.replace("/(app)/home");
   }
 

@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
-// Storage cross‑platform: WEB → sessionStorage, NATIVE → SecureStore
 const storage = {
   async getItem(key: string) {
     if (Platform.OS === "web")
@@ -30,7 +29,7 @@ const TOKEN_KEY = "auth_token";
 type AuthState = {
   token: string | null;
   hydrating: boolean;
-  setToken: (t: string | null) => Promise<void>;
+  setToken: (t: string | null, remember?: boolean) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -55,10 +54,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  const setToken = async (t: string | null) => {
+  const setToken = async (t: string | null, remember = false) => {
     setTokenState(t);
-    if (t) await storage.setItem(TOKEN_KEY, t);
-    else await storage.removeItem(TOKEN_KEY);
+    if (t && remember) {
+      await storage.setItem(TOKEN_KEY, t);
+    } else {
+      await storage.removeItem(TOKEN_KEY); // no se guarda si remember=false
+    }
   };
 
   const signOut = async () => {
